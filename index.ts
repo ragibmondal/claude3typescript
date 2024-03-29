@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as fs from 'fs';
+import * as FormData from 'form-data';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -15,8 +16,8 @@ class ClaudeChatbot {
   private readonly baseUrl: string;
   private conversation: Message[] = [];
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+  constructor() {
+    this.apiKey = process.env.CLAUDE_API_KEY || '';
     this.baseUrl = 'https://api.anthropic.com/v3';
   }
 
@@ -40,6 +41,10 @@ class ClaudeChatbot {
         },
       });
 
+      if (response.status !== 200) {
+        throw new Error(`Claude API returned ${response.status}: ${response.statusText}`);
+      }
+
       const assistantMessage = response.data.messages.pop();
       if (!assistantMessage || assistantMessage.role !== 'assistant') {
         throw new Error('Invalid response from Claude API');
@@ -49,14 +54,16 @@ class ClaudeChatbot {
       return assistantMessage.content;
     } catch (error) {
       console.error('Error communicating with Claude API:', error);
+      if (error.response) {
+        console.error('API response:', error.response.data);
+      }
       return 'I'm sorry, there seems to be an error communicating with the Claude API.';
     }
   }
 }
 
 // Usage example
-const apiKey = 'your_api_key_here';
-const claude = new ClaudeChatbot(apiKey);
+const claude = new ClaudeChatbot();
 
 async function main() {
   const userInput = prompt('Enter your message for Claude: ');
